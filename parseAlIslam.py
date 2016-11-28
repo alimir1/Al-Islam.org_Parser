@@ -91,11 +91,3 @@ def get_miscellaneous_information(soup):
             return miscellaneous_information.string
     else:
         return ""
-
-url = "https://www.al-islam.org/180-questions-about-islam-vol-2-various-issues-makarim-shirazi"
-if "articles" not in url:
-    book = get_book_metadata(url)
-    if book:
-        print book.miscellaneous_information
-else:
-    print "this book is an article: %s" % (url)
