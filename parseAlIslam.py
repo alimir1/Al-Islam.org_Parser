@@ -1,0 +1,87 @@
+from bs4 import BeautifulSoup
+from urllib2 import urlopen
+
+class Book(object):
+    def __init__(self, title, authors, publishers, translators, description, tags, categories, featured_categories, related_books, miscellaneous_information):
+        self.title = title
+        self.authors = authors
+        self.publishers = publishers
+        self.translators = translators
+        self.description = description
+        self.tags = tags
+        self.categories = categories
+        self.related_books = related_books
+        self.miscellaneous_information = miscellaneous_information
+        self.featured_categories = featured_categories
+
+def make_soup(url):
+    html = urlopen(url).read()
+    return BeautifulSoup(html, "lxml")
+
+def is_a_book(soup):
+    print_content_region = soup.find("span", "print-content-region")
+    if print_content_region:
+        return True
+    else:
+        return False
+
+def get_book_metadata(book_url):
+    title = "hewlk"
+    authors = [""]
+    publishers = [""]
+    translators = [""]
+    description = ""
+    tags = [""]
+    categories = [""]
+    featured_categories = [""]
+    related_books = [""]
+    miscellaneous_information = [""]
+
+    soup = make_soup(book_url)
+
+    if is_a_book(soup):
+        title = get_book_title(soup)
+        featured_categories = get_parsed_items(soup, "field field-name-field-featured-category field-type-taxonomy-term-reference field-label-inline clearfix")
+        authors = get_parsed_items(soup, "field field-name-field-author field-type-taxonomy-term-reference field-label-inline clearfix")
+        publishers = get_parsed_items(soup, "field field-name-field-publisher field-type-taxonomy-term-reference field-label-inline clearfix")
+        translators = get_parsed_items(soup, "field field-name-field-translator field-type-taxonomy-term-reference field-label-inline clearfix")
+        categories = get_parsed_items(soup, "field field-name-field-category field-type-taxonomy-term-reference field-label-inline clearfix")
+        tags = get_parsed_items(soup, "field field-name-field-tags field-type-taxonomy-term-reference field-label-inline clearfix")
+        related_books = get_related_books(soup)
+    else:
+        print "Not a book: %s" %(book_url)
+    return Book(title, authors, publishers, translators, description, tags, categories, featured_categories, related_books, miscellaneous_information)
+
+def get_book_title(soup):
+    title = soup.find("h1", "page-header")
+    if title:
+        return title.string
+
+def get_related_books(soup):
+    section = soup.find("div", "region region-sidebar-second")
+    if section:
+        related_section = section.find("section", "block block-views clearfix")
+        if related_section:
+            related_sources = section.find("div", "view-content")
+            if related_sources:
+                related_books = [a.string for a in related_sources.findAll("span", "field-content")]
+                if related_books:
+                    return related_books
+
+def get_parsed_items(soup, section_class_name):
+    section = soup.find("div", section_class_name)
+    if section:
+        items = section.find("div", "field-items")
+        if items:
+            listOfItems = [a.string for a in items.findAll("div")]
+            if listOfItems:
+                return listOfItems
+
+
+
+url = "https://www.al-islam.org/a-shiite-anthology-muhammad-husayn-tabatabai"
+if "articles" not in url:
+    book = get_book_metadata(url)
+    print book.related_books[3]
+else:
+    print "this book is an article: %s" % (url)
