@@ -1,5 +1,5 @@
 from bs4 import BeautifulSoup
-from urllib2 import urlopen
+import urllib
 
 class Book(object):
     def __init__(self, title, authors, publishers, translators, description, tags, categories, featured_categories, related_books, miscellaneous_information):
@@ -15,7 +15,7 @@ class Book(object):
         self.featured_categories = featured_categories
 
 def make_soup(url):
-    html = urlopen(url).read()
+    html = urllib.urlopen(url).read()
     return BeautifulSoup(html, "lxml")
 
 def is_a_book(soup):
@@ -24,24 +24,6 @@ def is_a_book(soup):
         return True
     else:
         return False
-
-def get_book_metadata(book_url):
-    soup = make_soup(book_url)
-    if is_a_book(soup):
-        title = get_book_title(soup)
-        featured_categories = get_parsed_items(soup, "field field-name-field-featured-category field-type-taxonomy-term-reference field-label-inline clearfix")
-        authors = get_parsed_items(soup, "field field-name-field-author field-type-taxonomy-term-reference field-label-inline clearfix")
-        publishers = get_parsed_items(soup, "field field-name-field-publisher field-type-taxonomy-term-reference field-label-inline clearfix")
-        translators = get_parsed_items(soup, "field field-name-field-translator field-type-taxonomy-term-reference field-label-inline clearfix")
-        categories = get_parsed_items(soup, "field field-name-field-category field-type-taxonomy-term-reference field-label-inline clearfix")
-        tags = get_parsed_items(soup, "field field-name-field-tags field-type-taxonomy-term-reference field-label-inline clearfix")
-        related_books = get_related_books(soup)
-        description = get_description(soup)
-        miscellaneous_information = get_miscellaneous_information(soup)
-
-        return Book(title, authors, publishers, translators, description, tags, categories, featured_categories, related_books, miscellaneous_information)
-    else:
-        print "Not a book: %s" %(book_url)
 
 def get_book_title(soup):
     title = soup.find("h1", "page-header")
@@ -91,3 +73,46 @@ def get_miscellaneous_information(soup):
             return miscellaneous_information.string
     else:
         return ""
+
+
+def get_a_book_metadata(book_url):
+    soup = make_soup(book_url)
+    if is_a_book(soup):
+        title = get_book_title(soup)
+        featured_categories = get_parsed_items(soup, "field field-name-field-featured-category field-type-taxonomy-term-reference field-label-inline clearfix")
+        authors = get_parsed_items(soup, "field field-name-field-author field-type-taxonomy-term-reference field-label-inline clearfix")
+        publishers = get_parsed_items(soup, "field field-name-field-publisher field-type-taxonomy-term-reference field-label-inline clearfix")
+        translators = get_parsed_items(soup, "field field-name-field-translator field-type-taxonomy-term-reference field-label-inline clearfix")
+        categories = get_parsed_items(soup, "field field-name-field-category field-type-taxonomy-term-reference field-label-inline clearfix")
+        tags = get_parsed_items(soup, "field field-name-field-tags field-type-taxonomy-term-reference field-label-inline clearfix")
+        related_books = get_related_books(soup)
+        description = get_description(soup)
+        miscellaneous_information = get_miscellaneous_information(soup)
+
+        return Book(title, authors, publishers, translators, description, tags, categories, featured_categories, related_books, miscellaneous_information)
+    else:
+        print "Not a book: %s" %(book_url)
+
+def get_all_book_metaData():
+    books = get_all_book_urls()
+    ebook_metadatas = [get_a_book_metadata(book) for book in books]
+    return ebook_metadatas
+
+def download_all_ebooks():
+    books = get_all_book_urls()
+    all_books_urls = [download_ebook(book) for book in books]
+
+def get_all_book_urls():
+        soup = make_soup("https://www.al-islam.org/print/book/export/html")
+        url_list = soup.find("div", "item-list")
+        all_books_urls = [dd.a["href"] for dd in url_list.findAll("li")]
+        return all_books_urls
+
+def download_ebook(url):
+    if "articles" not in url:
+        soup = make_soup(url)
+        if is_a_book(soup):
+            ebook_url = soup.find("span", "print_epub").a["href"]
+            ebook_title = get_book_title(soup)
+            url_opener = urllib.URLopener()
+            url_opener.retrieve(ebook_url, ebook_title + ".epub")
