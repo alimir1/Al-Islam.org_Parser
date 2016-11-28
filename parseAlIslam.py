@@ -28,7 +28,7 @@ def is_a_book(soup):
 def get_book_title(soup):
     title = soup.find("h1", "page-header")
     if title:
-        return title.string.strip()
+        return ' '.join(title.string.split())
     else:
         return ""
 
@@ -39,7 +39,7 @@ def get_related_books(soup):
         if related_section:
             related_sources = section.find("div", "view-content")
             if related_sources:
-                related_books = [a.string for a in related_sources.findAll("span", "field-content")]
+                related_books = [a.string.split() for a in related_sources.findAll("span", "field-content")]
                 if related_books:
                     return related_books
     else:
@@ -50,7 +50,7 @@ def get_parsed_items(soup, section_class_name):
     if section:
         items = section.find("div", "field-items")
         if items:
-            listOfItems = [a.string for a in items.findAll("div")]
+            listOfItems = [a.string.split() for a in items.findAll("div")]
             if listOfItems:
                 return listOfItems
     else:
