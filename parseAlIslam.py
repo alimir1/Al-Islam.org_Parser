@@ -28,7 +28,7 @@ def is_a_book(soup):
 def get_book_title(soup):
     title = soup.find("h1", "page-header")
     if title:
-        return title.string
+        return title.string.strip()
     else:
         return ""
 
