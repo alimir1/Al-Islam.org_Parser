@@ -18,6 +18,8 @@ Returns a book object containing description, tags, categories, etc.
 Example: 
 
 ```python
+import parseAlIslam
+
 tabatabai_book = get_a_book_metadata("https://www.al-islam.org/a-shiite-anthology-muhammad-husayn-tabatabai")
 print tabatabai_book.title # A Shi'ite Anthology
 ```
@@ -37,6 +39,8 @@ Ebook format: epub
 Example:
 
 ```python
+import parseAlIslam
+
 download_ebook("https://www.al-islam.org/ethical-discourses-vol2-makarim-shirazi")
 # file downloaded as: Ethical Discourses: Volume 2.epub
 ```
