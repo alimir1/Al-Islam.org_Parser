@@ -26,19 +26,7 @@ def is_a_book(soup):
         return False
 
 def get_book_metadata(book_url):
-    title = "hewlk"
-    authors = [""]
-    publishers = [""]
-    translators = [""]
-    description = ""
-    tags = [""]
-    categories = [""]
-    featured_categories = [""]
-    related_books = [""]
-    miscellaneous_information = [""]
-
     soup = make_soup(book_url)
-
     if is_a_book(soup):
         title = get_book_title(soup)
         featured_categories = get_parsed_items(soup, "field field-name-field-featured-category field-type-taxonomy-term-reference field-label-inline clearfix")
@@ -48,14 +36,19 @@ def get_book_metadata(book_url):
         categories = get_parsed_items(soup, "field field-name-field-category field-type-taxonomy-term-reference field-label-inline clearfix")
         tags = get_parsed_items(soup, "field field-name-field-tags field-type-taxonomy-term-reference field-label-inline clearfix")
         related_books = get_related_books(soup)
+        description = get_description(soup)
+        miscellaneous_information = get_miscellaneous_information(soup)
+
+        return Book(title, authors, publishers, translators, description, tags, categories, featured_categories, related_books, miscellaneous_information)
     else:
         print "Not a book: %s" %(book_url)
-    return Book(title, authors, publishers, translators, description, tags, categories, featured_categories, related_books, miscellaneous_information)
 
 def get_book_title(soup):
     title = soup.find("h1", "page-header")
     if title:
         return title.string
+    else:
+        return ""
 
 def get_related_books(soup):
     section = soup.find("div", "region region-sidebar-second")
@@ -67,6 +60,8 @@ def get_related_books(soup):
                 related_books = [a.string for a in related_sources.findAll("span", "field-content")]
                 if related_books:
                     return related_books
+    else:
+        return [""]
 
 def get_parsed_items(soup, section_class_name):
     section = soup.find("div", section_class_name)
@@ -76,12 +71,31 @@ def get_parsed_items(soup, section_class_name):
             listOfItems = [a.string for a in items.findAll("div")]
             if listOfItems:
                 return listOfItems
+    else:
+        return [""]
 
+def get_description(soup):
+    description_section = soup.find("div", "field field-name-body field-type-text-with-summary field-label-hidden")
+    if description_section:
+        description = description_section.find("p")
+        if description:
+            return description.string
+    else:
+        return ""
 
+def get_miscellaneous_information(soup):
+    miscellaneous_information_section = soup.find("div", "field field-name-field-misc-info field-type-text-long field-label-inline clearfix")
+    if miscellaneous_information_section:
+        miscellaneous_information = miscellaneous_information_section.find("div", "field-items")
+        if miscellaneous_information:
+            return miscellaneous_information.string
+    else:
+        return ""
 
-url = "https://www.al-islam.org/a-shiite-anthology-muhammad-husayn-tabatabai"
+url = "https://www.al-islam.org/180-questions-about-islam-vol-2-various-issues-makarim-shirazi"
 if "articles" not in url:
     book = get_book_metadata(url)
-    print book.related_books[3]
+    if book:
+        print book.miscellaneous_information
 else:
     print "this book is an article: %s" % (url)
