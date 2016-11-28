@@ -25,7 +25,7 @@ print tabatabai_book.title # A Shi'ite Anthology
 ### Get All Books Metadata: get_all_book_metaData()
 Returns a list of book objects.
 
-Link for entire books collection: al-islam.org/print/book/export/html/
+Link for entire books collection: http://al-islam.org/print/book/export/html/
 
 ### Download an Ebook: download_ebook(url)
 Downloads ebook of the Al-Islam.org book url.
