@@ -6,11 +6,15 @@ By: Ali Mir
 
 Created: November 27, 2016
 
+Python version: 3xx
+
 Pull requests are always appreciated :)
 
 ---
 
 ## Usage
+
+Make sure to first install [Beautiful Soup](https://www.crummy.com/software/BeautifulSoup/bs4/doc/).
 
 ### Get Book Metadata: get_a_book_metadata(url)
 Returns a book object containing description, tags, categories, etc.
