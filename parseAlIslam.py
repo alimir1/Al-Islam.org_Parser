@@ -28,7 +28,8 @@ def is_a_book(soup):
 def get_book_title(soup):
     title = soup.find("h1", "page-header")
     if title:
-        return ' '.join(title.string.split())
+        newTitle = ' '.join(title.string.split())
+        return cleanString(newTitle)
     else:
         return ""
 
@@ -39,7 +40,7 @@ def get_related_books(soup):
         if related_section:
             related_sources = section.find("div", "view-content")
             if related_sources:
-                related_books = [a.string.split() for a in related_sources.findAll("span", "field-content")]
+                related_books = [cleanString(' '.join(a.string.split())) for a in related_sources.findAll("span", "field-content")]
                 if related_books:
                     return related_books
     else:
@@ -50,7 +51,7 @@ def get_parsed_items(soup, section_class_name):
     if section:
         items = section.find("div", "field-items")
         if items:
-            listOfItems = [a.string.split() for a in items.findAll("div")]
+            listOfItems = [cleanString(' '.join(a.string.split())) for a in items.findAll("div")]
             if listOfItems:
                 return listOfItems
     else:
@@ -88,7 +89,6 @@ def get_a_book_metadata(book_url):
         related_books = get_related_books(soup)
         description = get_description(soup)
         miscellaneous_information = get_miscellaneous_information(soup)
-
         return Book(title, authors, publishers, translators, description, tags, categories, featured_categories, related_books, miscellaneous_information)
     else:
         print "Not a book: %s" %(book_url)
@@ -113,6 +113,37 @@ def download_ebook(url):
         soup = make_soup(url)
         if is_a_book(soup):
             ebook_url = soup.find("span", "print_epub").a["href"]
-            ebook_title = get_book_title(soup)
+            ebook_authors = authors = get_parsed_items(soup, "field field-name-field-author field-type-taxonomy-term-reference field-label-inline clearfix")
+            ebook_title = refineStringFileNaming(get_book_title(soup), ebook_authors[0])
             url_opener = urllib.URLopener()
             url_opener.retrieve(ebook_url, ebook_title + ".epub")
+
+
+# Removes special characters (for FIREBASE)
+# https://www.firebase.com/docs/web/guide/understanding-data.html#section-creating-references
+#A child node's key cannot be longer than 768 bytes,
+#nor deeper than 32 levels. It can include any unicode characters except for
+#. $ # [ ] / and ASCII control characters 0-31 and 127.
+def cleanString(string):
+    newString = string
+    newString = newString.replace(".", "")
+    newString = newString.replace("[", "")
+    newString = newString.replace("]", "")
+    newString = newString.replace("#", "")
+    newString = newString.replace("$", "")
+    newString = newString.replace("/", "")
+    return newString
+
+# To name file of the ebook.
+# Cannot use / > < | : &
+# Reference: https://www.cyberciti.biz/faq/linuxunix-rules-for-naming-file-and-directory-names/
+def refineStringFileNaming(book_name, author_name):
+    newString = author_name + book_name
+    newString = newString.replace("/", "")
+    newString = newString.replace(">", "")
+    newString = newString.replace("<", "")
+    newString = newString.replace("|", "")
+    newString = newString.replace(":", "")
+    newString = newString.replace("&", "")
+    newString = newString.replace(" ", "") # remove extra space
+    return newString
