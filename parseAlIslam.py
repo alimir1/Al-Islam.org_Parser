@@ -1,5 +1,14 @@
 from bs4 import BeautifulSoup
-import urllib
+from urllib.request import urlopen
+
+featured_categories_class_name = "field field-name-field-featured-category field-type-taxonomy-term-reference field-label-inline clearfix"
+authors_class_name = "field field-name-field-author field-type-taxonomy-term-reference field-label-inline clearfix"
+publishers_class_name = "field field-name-field-publisher field-type-taxonomy-term-reference field-label-inline clearfix"
+translators_class_name = "field field-name-field-translator field-type-taxonomy-term-reference field-label-inline clearfix"
+categories_class_name = "field field-name-field-category field-type-taxonomy-term-reference field-label-inline clearfix"
+tags_class_name = "field field-name-field-tags field-type-taxonomy-term-reference field-label-inline clearfix"
+description_section_class_name = "field field-name-body field-type-text-with-summary field-label-hidden"
+miscellaneous_information_section_class_name = "field field-name-field-misc-info field-type-text-long field-label-inline clearfix"
 
 class Book(object):
     def __init__(self, title, authors, publishers, translators, description, tags, categories, featured_categories, related_books, miscellaneous_information):
@@ -15,7 +24,7 @@ class Book(object):
         self.featured_categories = featured_categories
 
 def make_soup(url):
-    html = urllib.urlopen(url).read()
+    html = urlopen(url).read()
     return BeautifulSoup(html, "lxml")
 
 def is_a_book(soup):
@@ -28,10 +37,8 @@ def is_a_book(soup):
 def get_book_title(soup):
     title = soup.find("h1", "page-header")
     if title:
-        newTitle = ' '.join(title.string.split())
-        return cleanString(newTitle)
-    else:
-        return ""
+        newTitle = cleanString(' '.join(title.string.split()))
+        return newTitle
 
 def get_related_books(soup):
     section = soup.find("div", "region region-sidebar-second")
@@ -43,8 +50,6 @@ def get_related_books(soup):
                 related_books = [cleanString(' '.join(a.string.split())) for a in related_sources.findAll("span", "field-content")]
                 if related_books:
                     return related_books
-    else:
-        return [""]
 
 def get_parsed_items(soup, section_class_name):
     section = soup.find("div", section_class_name)
@@ -54,11 +59,9 @@ def get_parsed_items(soup, section_class_name):
             listOfItems = [cleanString(' '.join(a.string.split())) for a in items.findAll("div")]
             if listOfItems:
                 return listOfItems
-    else:
-        return [""]
 
 def get_description(soup):
-    description_section = soup.find("div", "field field-name-body field-type-text-with-summary field-label-hidden")
+    description_section = soup.find("div", description_section_class_name)
     if description_section:
         description = description_section.find("p")
         if description:
@@ -67,7 +70,7 @@ def get_description(soup):
         return ""
 
 def get_miscellaneous_information(soup):
-    miscellaneous_information_section = soup.find("div", "field field-name-field-misc-info field-type-text-long field-label-inline clearfix")
+    miscellaneous_information_section = soup.find("div", miscellaneous_information_section_class_name)
     if miscellaneous_information_section:
         miscellaneous_information = miscellaneous_information_section.find("div", "field-items")
         if miscellaneous_information:
@@ -75,23 +78,22 @@ def get_miscellaneous_information(soup):
     else:
         return ""
 
-
 def get_a_book_metadata(book_url):
     soup = make_soup(book_url)
     if is_a_book(soup):
         title = get_book_title(soup)
-        featured_categories = get_parsed_items(soup, "field field-name-field-featured-category field-type-taxonomy-term-reference field-label-inline clearfix")
-        authors = get_parsed_items(soup, "field field-name-field-author field-type-taxonomy-term-reference field-label-inline clearfix")
-        publishers = get_parsed_items(soup, "field field-name-field-publisher field-type-taxonomy-term-reference field-label-inline clearfix")
-        translators = get_parsed_items(soup, "field field-name-field-translator field-type-taxonomy-term-reference field-label-inline clearfix")
-        categories = get_parsed_items(soup, "field field-name-field-category field-type-taxonomy-term-reference field-label-inline clearfix")
-        tags = get_parsed_items(soup, "field field-name-field-tags field-type-taxonomy-term-reference field-label-inline clearfix")
+        featured_categories = get_parsed_items(soup, featured_categories_class_name)
+        authors = get_parsed_items(soup, authors_class_name)
+        publishers = get_parsed_items(soup, publishers_class_name)
+        translators = get_parsed_items(soup, translators_class_name)
+        categories = get_parsed_items(soup, categories_class_name)
+        tags = get_parsed_items(soup, tags_class_name)
         related_books = get_related_books(soup)
         description = get_description(soup)
         miscellaneous_information = get_miscellaneous_information(soup)
         return Book(title, authors, publishers, translators, description, tags, categories, featured_categories, related_books, miscellaneous_information)
     else:
-        print "Not a book: %s" %(book_url)
+        print ("Not a book: " + book_url)
 
 def get_all_book_metaData():
     books = get_all_book_urls()
@@ -112,12 +114,26 @@ def download_ebook(url):
     if "articles" not in url:
         soup = make_soup(url)
         if is_a_book(soup):
+            ebook_title = create_unique_string(soup)
             ebook_url = soup.find("span", "print_epub").a["href"]
-            ebook_authors = authors = get_parsed_items(soup, "field field-name-field-author field-type-taxonomy-term-reference field-label-inline clearfix")
-            ebook_title = refineStringFileNaming(get_book_title(soup), ebook_authors[0])
             url_opener = urllib.URLopener()
             url_opener.retrieve(ebook_url, ebook_title + ".epub")
 
+
+# Unique string for saving epub or other al-Islam files
+def create_unique_string(soup):
+    title = get_book_title(soup)
+    if get_parsed_items(soup, authors_class_name):
+        authors = get_parsed_items(soup, authors_class_name)
+        return refineStringFileNaming(title + authors[0])
+    elif get_parsed_items(soup, publishers_class_name):
+        publishers = get_parsed_items(soup, publishers_class_name)
+        return refineStringFileNaming(title + publishers[0])
+    elif get_parsed_items(soup, translators_class_name):
+        translators = get_parsed_items(soup, translators_class_name)
+        return refineStringFileNaming(title + translators[0])
+    else:
+        return title
 
 # Removes special characters (for FIREBASE)
 # https://www.firebase.com/docs/web/guide/understanding-data.html#section-creating-references
@@ -137,13 +153,13 @@ def cleanString(string):
 # To name file of the ebook.
 # Cannot use / > < | : &
 # Reference: https://www.cyberciti.biz/faq/linuxunix-rules-for-naming-file-and-directory-names/
-def refineStringFileNaming(book_name, author_name):
-    newString = author_name + book_name
+def refineStringFileNaming(unique_string):
+    newString = unique_string
     newString = newString.replace("/", "")
     newString = newString.replace(">", "")
     newString = newString.replace("<", "")
     newString = newString.replace("|", "")
     newString = newString.replace(":", "")
     newString = newString.replace("&", "")
-    newString = newString.replace(" ", "") # remove extra space
+    newString = newString.replace(" ", "") # removes all spaces
     return newString
