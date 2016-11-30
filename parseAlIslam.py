@@ -1,5 +1,6 @@
 from bs4 import BeautifulSoup
-from urllib.request import urlopen
+import urllib
+from urllib.request import urlopen, urlretrieve
 
 featured_categories_class_name = "field field-name-field-featured-category field-type-taxonomy-term-reference field-label-inline clearfix"
 authors_class_name = "field field-name-field-author field-type-taxonomy-term-reference field-label-inline clearfix"
@@ -11,7 +12,7 @@ description_section_class_name = "field field-name-body field-type-text-with-sum
 miscellaneous_information_section_class_name = "field field-name-field-misc-info field-type-text-long field-label-inline clearfix"
 
 class Book(object):
-    def __init__(self, title, authors, publishers, translators, description, tags, categories, featured_categories, related_books, miscellaneous_information):
+    def __init__(self, title, authors, publishers, translators, description, tags, categories, featured_categories, related_books, miscellaneous_information, unique_book_title_string):
         self.title = title
         self.authors = authors
         self.publishers = publishers
@@ -22,6 +23,7 @@ class Book(object):
         self.related_books = related_books
         self.miscellaneous_information = miscellaneous_information
         self.featured_categories = featured_categories
+        self.unique_book_title_string = unique_book_title_string
 
 def make_soup(url):
     html = urlopen(url).read()
@@ -56,7 +58,7 @@ def get_parsed_items(soup, section_class_name):
     if section:
         items = section.find("div", "field-items")
         if items:
-            listOfItems = [cleanString(' '.join(a.string.split())) for a in items.findAll("div")]
+            listOfItems = [cleanString(' '.join(a.string.split())).title().replace("'", "") for a in items.findAll("div")]
             if listOfItems:
                 return listOfItems
 
@@ -91,7 +93,8 @@ def get_a_book_metadata(book_url):
         related_books = get_related_books(soup)
         description = get_description(soup)
         miscellaneous_information = get_miscellaneous_information(soup)
-        return Book(title, authors, publishers, translators, description, tags, categories, featured_categories, related_books, miscellaneous_information)
+        unique_book_title_string = create_unique_string(soup)
+        return Book(title, authors, publishers, translators, description, tags, categories, featured_categories, related_books, miscellaneous_information, unique_book_title_string)
     else:
         print ("Not a book: " + book_url)
 
@@ -100,25 +103,18 @@ def get_all_book_metaData():
     ebook_metadatas = [get_a_book_metadata(book) for book in books]
     return ebook_metadatas
 
-def download_all_ebooks():
-    books = get_all_book_urls()
-    all_books_urls = [download_ebook(book) for book in books]
-
-def get_all_book_urls():
-        soup = make_soup("https://www.al-islam.org/print/book/export/html")
-        url_list = soup.find("div", "item-list")
-        all_books_urls = [dd.a["href"] for dd in url_list.findAll("li")]
-        return all_books_urls
-
 def download_ebook(url):
     if "articles" not in url:
         soup = make_soup(url)
         if is_a_book(soup):
             ebook_title = create_unique_string(soup)
             ebook_url = soup.find("span", "print_epub").a["href"]
-            url_opener = urllib.URLopener()
-            url_opener.retrieve(ebook_url, ebook_title + ".epub")
+            urlretrieve(ebook_url, ebook_title + ".epub")
 
+def download_all_ebooks():
+    books = get_all_book_urls()
+    for i in range(4, 50):
+        download_ebook(books[i])
 
 # Unique string for saving epub or other al-Islam files
 def create_unique_string(soup):
@@ -134,6 +130,12 @@ def create_unique_string(soup):
         return refineStringFileNaming(title + translators[0])
     else:
         return title
+
+def get_all_book_urls():
+        soup = make_soup("https://www.al-islam.org/print/book/export/html")
+        url_list = soup.find("div", "item-list")
+        all_books_urls = [dd.a["href"] for dd in url_list.findAll("li")]
+        return all_books_urls
 
 # Removes special characters (for FIREBASE)
 # https://www.firebase.com/docs/web/guide/understanding-data.html#section-creating-references
