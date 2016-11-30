@@ -58,7 +58,7 @@ def get_parsed_items(soup, section_class_name):
     if section:
         items = section.find("div", "field-items")
         if items:
-            listOfItems = [cleanString(' '.join(a.string.split())).title().replace("'", "") for a in items.findAll("div")]
+            listOfItems = [cleanString(' '.join(a.string.split())) for a in items.findAll("div")]
             if listOfItems:
                 return listOfItems
 
@@ -80,56 +80,46 @@ def get_miscellaneous_information(soup):
     else:
         return ""
 
-def get_a_book_metadata(book_url):
-    soup = make_soup(book_url)
-    if is_a_book(soup):
-        title = get_book_title(soup)
-        featured_categories = get_parsed_items(soup, featured_categories_class_name)
-        authors = get_parsed_items(soup, authors_class_name)
-        publishers = get_parsed_items(soup, publishers_class_name)
-        translators = get_parsed_items(soup, translators_class_name)
-        categories = get_parsed_items(soup, categories_class_name)
-        tags = get_parsed_items(soup, tags_class_name)
-        related_books = get_related_books(soup)
-        description = get_description(soup)
-        miscellaneous_information = get_miscellaneous_information(soup)
-        unique_book_title_string = create_unique_string(soup)
-        return Book(title, authors, publishers, translators, description, tags, categories, featured_categories, related_books, miscellaneous_information, unique_book_title_string)
-    else:
-        print ("Not a book: " + book_url)
+def get_a_book_metadata(book_url, need_to_download_ebook):
+    if "articles" not in book_url:
+        soup = make_soup(book_url)
+        if is_a_book(soup):
+            title = get_book_title(soup)
+            featured_categories = get_parsed_items(soup, featured_categories_class_name)
+            authors = get_parsed_items(soup, authors_class_name)
+            publishers = get_parsed_items(soup, publishers_class_name)
+            translators = get_parsed_items(soup, translators_class_name)
+            categories = get_parsed_items(soup, categories_class_name)
+            tags = get_parsed_items(soup, tags_class_name)
+            related_books = get_related_books(soup)
+            description = get_description(soup)
+            miscellaneous_information = get_miscellaneous_information(soup)
+            unique_book_title_string = create_unique_title(title, authors, publishers, translators)
+            if need_to_download_ebook:
+                download_ebook(soup, unique_book_title_string)
+            return Book(title, authors, publishers, translators, description, tags, categories, featured_categories, related_books, miscellaneous_information, unique_book_title_string)
 
 def get_all_book_metaData():
     books = get_all_book_urls()
     ebook_metadatas = [get_a_book_metadata(book) for book in books]
     return ebook_metadatas
 
-def download_ebook(url):
-    if "articles" not in url:
-        soup = make_soup(url)
-        if is_a_book(soup):
-            ebook_title = create_unique_string(soup)
-            ebook_url = soup.find("span", "print_epub").a["href"]
-            urlretrieve(ebook_url, ebook_title + ".epub")
-
-def download_all_ebooks():
-    books = get_all_book_urls()
-    for i in range(4, 50):
-        download_ebook(books[i])
+def download_ebook(soup, unique_book_string):
+    ebook_title = unique_book_string
+    ebook_url = soup.find("span", "print_epub").a["href"]
+    urlretrieve(ebook_url, ebook_title + ".epub")
 
 # Unique string for saving epub or other al-Islam files
-def create_unique_string(soup):
-    title = get_book_title(soup)
-    if get_parsed_items(soup, authors_class_name):
-        authors = get_parsed_items(soup, authors_class_name)
-        return refineStringFileNaming(title + authors[0])
-    elif get_parsed_items(soup, publishers_class_name):
-        publishers = get_parsed_items(soup, publishers_class_name)
-        return refineStringFileNaming(title + publishers[0])
-    elif get_parsed_items(soup, translators_class_name):
-        translators = get_parsed_items(soup, translators_class_name)
-        return refineStringFileNaming(title + translators[0])
+def create_unique_title(title, authors, publishers, translators):
+    title = title
+    if authors:
+        return refineStringFileNaming(title + authors[0]).replace("?", "")
+    elif publishers:
+        return refineStringFileNaming(title + publishers[0]).replace("?", "")
+    elif translators:
+        return refineStringFileNaming(title + translators[0]).replace("?", "")
     else:
-        return title
+        return title.replace("?", "")
 
 def get_all_book_urls():
         soup = make_soup("https://www.al-islam.org/print/book/export/html")
